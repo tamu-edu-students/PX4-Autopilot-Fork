@@ -1,0 +1,163 @@
+#!/bin/sh
+#
+# @name Tri-EDF Tailsitter (vector flaps)
+#
+# @type Tailsitter
+# @class VTOL
+#
+# @maintainer Manas Rajendran <manas.rajend>
+#
+# @output Motor1 EDF in Wing A
+# @output Motor2 EDF in Wing B
+# @output Motor3 EDF in Wing C
+# @output Servo1 Under-motor flap A (vector)
+# @output Servo2 Under-motor flap B (vector)
+# @output Servo3 Under-motor flap C (vector)
+# @output Servo4 Outer flap A
+# @output Servo5 Outer flap B
+# @output Servo6 Outer flap C
+#
+# Notes:
+#  - Hover uses MC controller (EDF thrust only; flaps optional).
+#  - Forward flight uses FW controller; surfaces provide control.
+#  - Geometry below assumes equilateral triangle, radius r≈0.25 m.
+
+# --- Generic VTOL defaults (controllers, apps, logging, etc.)
+. ${R}etc/init.d/rc.vtol_defaults
+
+# --- Identity
+param set-default MAV_TYPE 22          # VTOL
+param set-default VT_TYPE 3            # Tailsitter (verify on your PX4 version)
+
+# --- Battery (edit to match your pack)
+param set-default BAT1_N_CELLS 10      # example: 10S ~ 36-42 V EDF pack
+
+# --- Multicopter hover behaviour
+param set-default MC_AIRMODE 1
+param set-default MPC_THR_HOVER 0.45
+param set-default MPC_TILTMAX_AIR 25
+param set-default MC_ROLLRATE_MAX 80
+param set-default MC_PITCHRATE_MAX 80
+param set-default MC_YAWRATE_MAX 60
+
+# --- VTOL transitions (initial, conservative)
+param set-default VT_ARSP_TRANS 14
+param set-default VT_ARSP_BLEND 10
+param set-default VT_B_TRANS_DUR 8
+param set-default VT_TRANS_MIN_TM 4
+param set-default VT_FWD_THRUST_SC 1.0
+
+# --- Fixed-wing defaults (tailsitter forward flight)
+param set-default FW_AIRSPD_TRIM 18
+param set-default FW_AIRSPD_MIN 14
+param set-default FW_AIRSPD_MAX 28
+param set-default FW_R_LIM 45
+param set-default FW_P_LIM_MAX 25
+param set-default FW_P_LIM_MIN -25
+
+# ============================
+# Control Allocation: Geometry
+# ============================
+# PX4 body frame: +X forward, +Y right, +Z down.
+# Hover thrust is -Z (upward), so AZ = -1 for vertical rotors.
+
+param set-default CA_AIRFRAME 2          # Multirotor CA basis
+
+# --- Rotor layout (equilateral triangle, r = 0.25 m)
+param set-default CA_ROTOR_COUNT 3
+# Wing A at +X
+param set-default CA_ROTOR0_PX 0.25
+param set-default CA_ROTOR0_PY 0.00
+param set-default CA_ROTOR0_AZ -1.0      # thrust up in hover
+param set-default CA_ROTOR0_KM 0.00      # EDF reaction torque small; start at 0
+
+# Wing B at -X/2, +Y*sqrt(3)/2
+param set-default CA_ROTOR1_PX -0.125
+param set-default CA_ROTOR1_PY  0.2165
+param set-default CA_ROTOR1_AZ -1.0
+param set-default CA_ROTOR1_KM  0.00
+
+# Wing C at -X/2, -Y*sqrt(3)/2
+param set-default CA_ROTOR2_PX -0.125
+param set-default CA_ROTOR2_PY -0.2165
+param set-default CA_ROTOR2_AZ -1.0
+param set-default CA_ROTOR2_KM  0.00
+
+# Tip: once you know spin directions, set small +/- KM to help yaw.
+
+# ================================
+# Control surfaces (6 total servo)
+# ================================
+# We'll declare 6 generic control surfaces. Types don’t matter as much as
+# their torque axes; we’ll start with symmetric pitch/yaw authority for
+# under-motor flaps and roll/pitch for outer flaps. You’ll refine with QGC
+# Actuators after first signs of life.
+
+param set-default CA_SV_CS_COUNT 6
+
+# Under-motor flap A (beneath Rotor0): give pitch & yaw leverage
+param set-default CA_SV_CS0_TYPE 15      # generic control surface
+param set-default CA_SV_CS0_TRQ_P  0.50
+param set-default CA_SV_CS0_TRQ_Y  0.40
+param set-default CA_SV_CS0_TRQ_R  0.00
+
+# Under-motor flap B (beneath Rotor1)
+param set-default CA_SV_CS1_TYPE 15
+param set-default CA_SV_CS1_TRQ_P  0.50
+param set-default CA_SV_CS1_TRQ_Y -0.20   # sign can differ by geometry; adjust later
+param set-default CA_SV_CS1_TRQ_R  0.30
+
+# Under-motor flap C (beneath Rotor2)
+param set-default CA_SV_CS2_TYPE 15
+param set-default CA_SV_CS2_TRQ_P  0.50
+param set-default CA_SV_CS2_TRQ_Y -0.20
+param set-default CA_SV_CS2_TRQ_R -0.30
+
+# Outer flap A (Wing A): add roll/pitch for forward flight
+param set-default CA_SV_CS3_TYPE 13
+param set-default CA_SV_CS3_TRQ_P  0.40
+param set-default CA_SV_CS3_TRQ_R  0.40
+param set-default CA_SV_CS3_TRQ_Y  0.00
+
+# Outer flap B (Wing B)
+param set-default CA_SV_CS4_TYPE 13
+param set-default CA_SV_CS4_TRQ_P  0.40
+param set-default CA_SV_CS4_TRQ_R -0.40
+param set-default CA_SV_CS4_TRQ_Y  0.00
+
+# Outer flap C (Wing C)
+param set-default CA_SV_CS5_TYPE 13
+param set-default CA_SV_CS5_TRQ_P  0.40
+param set-default CA_SV_CS5_TRQ_R  0.00
+param set-default CA_SV_CS5_TRQ_Y  0.40
+
+# ======================
+# Output function map
+# ======================
+# Map MAIN outputs to motors & surfaces. You can set these here or in QGC:
+# (Use the Actuators tab to confirm channel ordering and reverse if needed.)
+
+# Motors (EDF)
+param set-default PWM_MAIN_FUNC1 101     # Motor1
+param set-default PWM_MAIN_FUNC2 102     # Motor2
+param set-default PWM_MAIN_FUNC3 103     # Motor3
+
+# Surfaces: 6 servos
+param set-default PWM_MAIN_FUNC4 201     # CS0 (under-motor A)
+param set-default PWM_MAIN_FUNC5 202     # CS1 (under-motor B)
+param set-default PWM_MAIN_FUNC6 203     # CS2 (under-motor C)
+param set-default PWM_MAIN_FUNC7 204     # CS3 (outer A)
+param set-default PWM_MAIN_FUNC8 205     # CS4 (outer B)
+# If you have a 9th channel available:
+# param set-default PWM_MAIN_FUNC9 206    # CS5 (outer C)
+
+# PWM timing/safe positions (adjust for your ESCs/servos)
+param set-default PWM_MAIN_RATE 400
+param set-default PWM_MAIN_MIN  1000
+param set-default PWM_MAIN_MAX  2000
+param set-default PWM_MAIN_DIS1 1000
+param set-default PWM_MAIN_DIS2 1000
+param set-default PWM_MAIN_DIS3 1000
+
+# Force reset defaults on upgrades if you change this file in future
+set PARAM_DEFAULTS_VER 2
