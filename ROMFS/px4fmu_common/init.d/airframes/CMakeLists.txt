@@ -137,6 +137,7 @@ if(CONFIG_MODULES_VTOL_ATT_CONTROL)
 		13100_generic_vtol_tiltrotor
 		13030_generic_vtol_quad_tiltrotor
 		13200_generic_vtol_tailsitter
+		#13399_tri_edf_tailsitter
 	)
 endif()
 
@@ -153,7 +154,6 @@ if(CONFIG_MODULES_ROVER_ACKERMANN)
 		# [51000, 51999] Ackermann rovers
 		51000_generic_rover_ackermann
 		51001_axial_scx10_2_trail_honcho
-		51002_nxp_b3rb
 	)
 endif()
 

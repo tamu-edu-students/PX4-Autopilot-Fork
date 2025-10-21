@@ -1,36 +1,31 @@
 #!/bin/sh
 #
-# @name Tri-EDF Tailsitter (vector flaps)
+# @name Tri-EDF Tailsitter
 #
-# @type Tailsitter
+# @type VTOL Tailsitter
 # @class VTOL
 #
-# @maintainer Manas Rajendran <manas.rajend>
+# @maintainer Manas Rajendran <manas.rajendran913@gmail.com>
 #
-# @output Motor1 EDF in Wing A
-# @output Motor2 EDF in Wing B
-# @output Motor3 EDF in Wing C
-# @output Servo1 Under-motor flap A (vector)
-# @output Servo2 Under-motor flap B (vector)
-# @output Servo3 Under-motor flap C (vector)
-# @output Servo4 Outer flap A
-# @output Servo5 Outer flap B
-# @output Servo6 Outer flap C
 #
-# Notes:
-#  - Hover uses MC controller (EDF thrust only; flaps optional).
-#  - Forward flight uses FW controller; surfaces provide control.
-#  - Geometry below assumes equilateral triangle, radius r≈0.25 m.
+# @output Motor1 EDF Left
+# @output Motor2 EDF Right
+# @output Motor3 EDF Rear
+# @output Servo1 Under-motor Left flap
+# @output Servo2 Under-motor Right flap
+# @output Servo3 Under-motor Rear flap
+# @output Servo4 Outer Left flap
+# @output Servo5 Outer Right flap
+# @output Servo6 Outer Rear flap
 
-# --- Generic VTOL defaults (controllers, apps, logging, etc.)
 . ${R}etc/init.d/rc.vtol_defaults
 
 # --- Identity
-param set-default MAV_TYPE 22          # VTOL
-param set-default VT_TYPE 3            # Tailsitter (verify on your PX4 version)
+param set-default MAV_TYPE 26    # MAVLink-level identity
+param set-default VT_TYPE 3      # PX4 internal tailsitter mode
 
 # --- Battery (edit to match your pack)
-param set-default BAT1_N_CELLS 10      # example: 10S ~ 36-42 V EDF pack
+param set-default BAT1_N_CELLS 6      
 
 # --- Multicopter hover behaviour
 param set-default MC_AIRMODE 1
@@ -88,9 +83,9 @@ param set-default CA_ROTOR2_KM  0.00
 # ================================
 # Control surfaces (6 total servo)
 # ================================
-# We'll declare 6 generic control surfaces. Types don’t matter as much as
-# their torque axes; we’ll start with symmetric pitch/yaw authority for
-# under-motor flaps and roll/pitch for outer flaps. You’ll refine with QGC
+# We can declare 6 generic control surfaces. Types don't matter as much as
+# their torque axes; we'll start with symmetric pitch/yaw authority for
+# under-motor flaps and roll/pitch for outer flaps. You'll refine with QGC
 # Actuators after first signs of life.
 
 param set-default CA_SV_CS_COUNT 6
