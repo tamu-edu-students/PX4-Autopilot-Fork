@@ -36,6 +36,18 @@ project(OpticalFlowSystem)
 # Include the OpticalFlow external dependency
 include(${CMAKE_CURRENT_SOURCE_DIR}/optical_flow.cmake)
 
+# --- Fix: ensure compiler can see the OpticalFlow headers
+set(OpticalFlow_INCLUDE_DIRS
+    ${CMAKE_BINARY_DIR}/OpticalFlow/src/OpticalFlow/include
+    ${OpticalFlow_INCLUDE_DIRS}
+)
+include_directories(${OpticalFlow_INCLUDE_DIRS})
+
+# --- Fix 2: Add KLT feature tracker headers
+include_directories(
+    ${CMAKE_BINARY_DIR}/OpticalFlow/src/OpticalFlow/external/klt_feature_tracker/src
+)
+
 # Find OpenCV
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 
